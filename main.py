@@ -6,17 +6,15 @@ import os
 import schedule
 import time
 import threading
-from flask import Flask, request
-from keep_alive import keep_alive  # Import the keep_alive function
+from keep_alive import keep_alive
 
-# Keep the Flask server alive
+# Start the keep_alive function to keep the Flask server running
 keep_alive()
 
 # Initialize the bot
-API_TOKEN = '7585914391:AAHNP7x_oezIXtlVwrlCI0HGMjBsRzkqx2Q'
-GROUP_CHAT_ID = -1002262322366
+API_TOKEN = '7585914391:AAHNP7x_oezIXtlVwrlCI0HGMjBsRzkqx2Q'  # Your bot's API token
+GROUP_CHAT_ID = -1002262322366  # Your group's chat ID (ensure this is correct)
 bot = telebot.TeleBot(API_TOKEN)
-app = Flask(__name__)
 
 # Load or initialize user data
 USER_DATA_FILE = 'user_delp.json'
@@ -38,7 +36,7 @@ def save_user_data(data):
 user_data = load_user_data()
 
 # Admin IDs list
-admin_ids = [1150034136]
+admin_ids = [1150034136]  # List of admin IDs for admin commands
 
 # Function to send user data to admins
 def send_user_data_to_admin():
@@ -207,21 +205,16 @@ def handle_addition(message):
             }
             save_user_data(user_data)
 
-# Flask webhook setup
-@app.route(f'/{API_TOKEN}', methods=['POST'])
-def webhook():
-    json_str = request.get_data().decode('UTF-8')
-    update = telebot.types.Update.de_json(json_str)
-    bot.process_new_updates([update])
-    return 'OK'
+        try:
+            # Send a welcome message to the new user in private chat
+            bot.send_message(
+                new_user.id,
+                f"\U0001F44B Salom, [{new_user.first_name}](tg://user?id={new_user.id})! Siz guruhga qo'shildingiz. "
+                f"Botdan foydalanish uchun xususiy chatda /start buyrug'ini kiriting.",
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            print(f"Xabar yuborishda xatolik yuz berdi: {e}")
 
-@app.route('/')
-def index():
-    return 'Bot is running!'
-
-# Start the Flask server
-if __name__ == "__main__":
-    bot.remove_webhook()
-    bot.set_webhook(url=f'https://your-app-name.com/{API_TOKEN}')  # Replace with your actual URL
-    app.run(host="0.0.0.0", port=8080)
-    
+# Start the bot and polling
+bot.polling(none_stop=True)
