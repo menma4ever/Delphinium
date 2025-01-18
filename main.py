@@ -1,7 +1,8 @@
 import telebot
 import json
 import random
-
+from keep_alive import keep_alive
+keep_alive()
 # Initialize the bot
 API_TOKEN = '7585914391:AAHNP7x_oezIXtlVwrlCI0HGMjBsRzkqx2Q'
 GROUP_CHAT_ID = -1002262322366
