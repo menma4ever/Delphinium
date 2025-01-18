@@ -1,8 +1,14 @@
+from keep_alive import keep_alive
+keep_alive()
 import telebot
 import json
 import random
-from keep_alive import keep_alive
-keep_alive()
+import string
+import os
+import schedule
+import time
+import threading
+
 # Initialize the bot
 API_TOKEN = '7585914391:AAHNP7x_oezIXtlVwrlCI0HGMjBsRzkqx2Q'
 GROUP_CHAT_ID = -1002262322366
@@ -10,7 +16,6 @@ bot = telebot.TeleBot(API_TOKEN)
 
 # Load or initialize user data
 USER_DATA_FILE = 'user_delp.json'
-
 
 def load_user_data():
     """Load user data from the JSON file."""
@@ -20,80 +25,40 @@ def load_user_data():
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
-
 def save_user_data(data):
     """Save user data to the JSON file."""
     with open(USER_DATA_FILE, 'w') as f:
         json.dump(data, f, indent=4)
 
-
 # Load existing user data
 user_data = load_user_data()
 
-
-# Generate a unique ticket
-import random
-import string
-
-
-import os
-
-import os
-
-import os
-import schedule
-import time
-
-# Adminlar ID ro'yxati
+# Admin IDs list
 admin_ids = [1150034136]
 
-# Fayl yo'li
-USER_DATA_FILE = 'user_delp.json'
-
+# Function to send user data to admins
 def send_user_data_to_admin():
-    # Har bir admin uchun fayl yuborish
+    """Send user data to admin(s)."""
     for admin_id in admin_ids:
-        if os.path.exists(USER_DATA_FILE):  # Fayl mavjudligini tekshirish
+        if os.path.exists(USER_DATA_FILE):  # Check if file exists
             with open(USER_DATA_FILE, 'rb') as file:
-                bot.send_document(admin_id, file)  # Faylni yuborish
+                bot.send_document(admin_id, file)  # Send the file to admin
         else:
-            bot.send_message(admin_id, "Fayl topilmadi!")
+            bot.send_message(admin_id, "Fayl topilmadi!")  # If file doesn't exist
 
-# Har 1 soatda bir marta faylni yuborish uchun jadval yaratish
+# Schedule to send data every hour
 schedule.every(1).hour.do(send_user_data_to_admin)
 
-@bot.message_handler(commands=['import'])
-def import_user_data(message):
-    # Foydalanuvchi private chatda bo'lishini tekshirish
-    if message.chat.type == 'private':
-        user_id = message.from_user.id  # Foydalanuvchi ID sini olish
-
-        # Faqatgina administratorlar uchun /import komandasi
-        if user_id in admin_ids:
-            if os.path.exists(USER_DATA_FILE):  # Fayl mavjudligini tekshirish
-                with open(USER_DATA_FILE, 'rb') as file:
-                    bot.send_document(message.chat.id, file)  # Faylni yuborish
-            else:
-                bot.send_message(message.chat.id, "Fayl topilmadi!")
-        else:
-            bot.send_message(message.chat.id, "Sizda bu komanda uchun ruxsat yo'q.")
-    else:
-        bot.send_message(message.chat.id, "Bu komanda faqat private chatda ishlaydi.")
-
-# Botni ishga tushirish va jadvalni tekshirish
+# Function to run the scheduler in a separate thread
 def run_scheduler():
     while True:
         schedule.run_pending()
-        time.sleep(10)  # Har 1 minutda jadvalni tekshiradi
+        time.sleep(10)  # Check every 10 seconds
 
-# Boshqa kodlar va botni ishga tushirish
-import threading
+# Start the scheduler in a background thread
 threading.Thread(target=run_scheduler, daemon=True).start()
 
-bot.polling(none_stop=True)
-
-
-
+# Function to generate a unique ticket
 def generate_unique_ticket(existing_tickets):
     while True:
         # Generate a random ticket with 2 letters and 3 digits (e.g., "AB123" or "ZP987")
@@ -105,7 +70,84 @@ def generate_unique_ticket(existing_tickets):
         if ticket not in existing_tickets:
             return ticket
 
+# Handle the /start command
+@bot.message_handler(commands=['start'])
+def start_command(message):
+    if message.chat.type == 'private':
+        if str(message.chat.id) in user_data:
+            user_name = user_data[str(message.chat.id)]['name']
+            bot.send_message(
+                message.chat.id,
+                f"\U0001F4A1 You are already registered as {user_name}."
+            )
+        else:
+            bot.send_message(
+                message.chat.id,
+                "\U0001F338 Hello! Please provide your name (3-15 letters, no spaces or symbols):"
+            )
+            bot.register_next_step_handler(message, get_name)
 
+# Handle new members joining the group
+@bot.message_handler(content_types=['new_chat_members'])
+def welcome_new_member(message):
+    for new_user in message.new_chat_members:
+        bot.delete_message(message.chat.id, message.message_id)
+        if new_user.id in user_data:
+            bot.send_message(
+                message.chat.id,
+                f"\U0001F44B Welcome, [{user_data[new_user.id]['name']}](tg://user?id={new_user.id})!",
+                parse_mode="Markdown"
+            )
+        else:
+            bot.send_message(
+                message.chat.id,
+                f"\U0001F6A9 Welcome, [{new_user.first_name}](tg://user?id={new_user.id})! Please use /start in private chat to register.",
+                parse_mode="Markdown"
+            )
+
+# Handle the /import command to send user data to the admin
+@bot.message_handler(commands=['import'])
+def import_user_data(message):
+    if message.chat.type == 'private':
+        user_id = message.from_user.id
+        if user_id in admin_ids:
+            if os.path.exists(USER_DATA_FILE):  
+                with open(USER_DATA_FILE, 'rb') as file:
+                    bot.send_document(message.chat.id, file)
+            else:
+                bot.send_message(message.chat.id, "Fayl topilmadi!")
+        else:
+            bot.send_message(message.chat.id, "Sizda bu komanda uchun ruxsat yo'q.")
+    else:
+        bot.send_message(message.chat.id, "Bu komanda faqat private chatda ishlaydi.")
+
+# Handle the /mytickets command
+@bot.message_handler(commands=['mytickets'])
+def show_tickets(message):
+    user_id = str(message.from_user.id)  # Foydalanuvchi ID sini olish (string formatda)
+
+    # Foydalanuvchining ma'lumotlari borligini tekshirish
+    if user_id in user_data:
+        tickets = user_data[user_id].get('tickets', [])
+        
+        if tickets:  # Agar ticketlar ro'yxati bo'sh bo'lmasa
+            tickets_list = '\n'.join([f"🎟 {ticket}" for ticket in tickets])  # Har bir ticketni oldiga emoji qo'shish
+            bot.reply_to(
+                message,
+                f"Sizning ticketlaringiz:\n{tickets_list}"
+            )
+        else:
+            bot.reply_to(
+                message,
+                "Sizda hech qanday ticket yo'q."
+            )
+    else:
+        bot.reply_to(
+            message,
+            "Sizda hech qanday ticket yo'q."
+        )
+
+# Handle new users joining the group
 @bot.message_handler(content_types=['new_chat_members'])
 def handle_addition(message):
     added_by = message.from_user  # Who added the new users
@@ -172,171 +214,6 @@ def handle_addition(message):
         except Exception as e:
             print(f"Xabar yuborishda xatolik yuz berdi: {e}")
 
-# Command to handle /start
-@bot.message_handler(commands=['start'])
-def start_command(message):
-    if message.chat.type == 'private':
-        # Foydalanuvchi allaqachon `user_data` ichida mavjudligini tekshirish
-        if str(message.chat.id) in user_data:
-            user_name = user_data[str(message.chat.id)]['name']
-            bot.send_message(
-                message.chat.id,
-                f"\U0001F4A1 You are already registered as {user_name}."
-            )
-        else:
-            bot.send_message(
-                message.chat.id,
-                "\U0001F338 Hello! Please provide your name (3-15 letters, no spaces or symbols):"
-            )
-            bot.register_next_step_handler(message, get_name)
-    else:
-        bot.send_message(
-            message.chat.id,
-            "\U0001F338 I am Delphinium, your group assistant bot!"
-        )
-
-
-def get_name(message):
-    name = message.text.strip()
-    # Foydalanuvchi ma'lumotlar bazasida mavjudligini tekshirish
-    if str(message.chat.id) in user_data:
-        bot.send_message(
-            message.chat.id,
-            "\U0001F4A1 You are already registered."
-        )
-        return
-
-    # Ismni tekshirish
-    if 3 <= len(name) <= 15 and name.isalpha():
-        user_data[str(message.chat.id)] = {
-            'name': name,
-            'age': None,
-            'tickets': []
-        }
-        save_user_data(user_data)
-        bot.send_message(
-            message.chat.id,
-            f"\U0001F389 Welcome, {name}! Please provide your age:"
-        )
-        bot.register_next_step_handler(message, get_age)
-    else:
-        bot.send_message(
-            message.chat.id,
-            "\U0001F6AB Invalid name. Please provide a valid name (3-15 letters, no spaces or symbols):"
-        )
-        bot.register_next_step_handler(message, get_name)
-
-
-def get_age(message):
-    try:
-        age = int(message.text.strip())
-        if str(message.chat.id) not in user_data:
-            bot.send_message(
-                message.chat.id,
-                "\U0001F6AB Please use /start to begin the registration process."
-            )
-            return
-
-        if 0 < age <= 120:
-            user_data[str(message.chat.id)]['age'] = age
-            save_user_data(user_data)
-            bot.send_message(
-                message.chat.id,
-                "\U0001F64C Registration complete!"
-            )
-        else:
-            bot.send_message(
-                message.chat.id,
-                "\U0001F6AB Invalid age. Please provide a valid age:"
-            )
-            bot.register_next_step_handler(message, get_age)
-    except ValueError:
-        bot.send_message(
-            message.chat.id,
-            "\U0001F6AB Invalid age. Please provide a valid age:"
-        )
-        bot.register_next_step_handler(message, get_age)
-
-
-# Load and save user data functions
-def load_user_data():
-    """Load user data from the JSON file."""
-    try:
-        with open(USER_DATA_FILE, 'r') as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-
-
-def save_user_data(data):
-    """Save user data to the JSON file."""
-    with open(USER_DATA_FILE, 'w') as f:
-        json.dump(data, f, indent=4)
-
-
-# Load existing user data
-user_data = load_user_data()
-
-# Handle new members joining the group
-@bot.message_handler(content_types=['new_chat_members'])
-def welcome_new_member(message):
-    for new_user in message.new_chat_members:
-        bot.delete_message(message.chat.id, message.message_id)
-        if new_user.id in user_data:
-            bot.send_message(
-                message.chat.id,
-                f"\U0001F44B Welcome, [{user_data[new_user.id]['name']}](tg://user?id={new_user.id})!",
-                parse_mode="Markdown"
-            )
-        else:
-            bot.send_message(
-                message.chat.id,
-                f"\U0001F6A9 Welcome, [{new_user.first_name}](tg://user?id={new_user.id})! Please use /start in private chat to register.",
-                parse_mode="Markdown"
-            )
-
-import json
-
-USER_DATA_FILE = 'user_delp.json'
-
-# Foydalanuvchi ma'lumotlarini yuklash
-def load_user_data():
-    try:
-        with open(USER_DATA_FILE, 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {}
-
-# Foydalanuvchi ma'lumotlarini saqlash
-def save_user_data(data):
-    with open(USER_DATA_FILE, 'w') as f:
-        json.dump(data, f, indent=4)
-
-@bot.message_handler(commands=['mytickets'])
-def show_tickets(message):
-    user_id = str(message.from_user.id)  # Foydalanuvchi ID sini olish (string formatda)
-
-    # Foydalanuvchining ma'lumotlari borligini tekshirish
-    if user_id in user_data:
-        tickets = user_data[user_id].get('tickets', [])
-        
-        if tickets:  # Agar ticketlar ro'yxati bo'sh bo'lmasa
-            tickets_list = '\n'.join([f"🎟 {ticket}" for ticket in tickets])  # Har bir ticketni oldiga emoji qo'shish
-            bot.reply_to(
-                message,
-                f"Sizning ticketlaringiz:\n{tickets_list}"
-            )
-        else:
-            bot.reply_to(
-                message,
-                "Sizda hech qanday ticket yo'q."
-            )
-    else:
-        bot.reply_to(
-            message,
-            "Sizda hech qanday ticket yo'q."
-        )
-
-
-# Start the bot
+# Start the bot and polling
 bot.polling(none_stop=True)
+                    
