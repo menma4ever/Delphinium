@@ -55,9 +55,6 @@ def run_scheduler():
         schedule.run_pending()
         time.sleep(10)  # Check every 10 seconds
 
-# Start the scheduler in a background thread
-threading.Thread(target=run_scheduler, daemon=True).start()
-
 # Function to generate a unique ticket
 def generate_unique_ticket(existing_tickets):
     while True:
@@ -214,6 +211,11 @@ def handle_addition(message):
         except Exception as e:
             print(f"Xabar yuborishda xatolik yuz berdi: {e}")
 
-# Start the bot and polling
-bot.polling(none_stop=True)
-        
+# Run the bot and scheduler
+def start_bot():
+    bot.polling(none_stop=True)  # Start the bot's polling in the main thread
+
+if __name__ == '__main__':
+    threading.Thread(target=run_scheduler, daemon=True).start()  # Start the scheduler in a separate thread
+    start_bot()  # Start the bot polling in the main thread
+            
