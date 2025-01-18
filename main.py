@@ -112,7 +112,7 @@ def import_user_data(message):
         user_id = message.from_user.id
         if user_id in admin_ids:
             if os.path.exists(USER_DATA_FILE):  
-h                with open(USER_DATA_FILE, 'rb') as file:
+                with open(USER_DATA_FILE, 'rb') as file:
                     bot.send_document(message.chat.id, file)
             else:
                 bot.send_message(message.chat.id, "Fayl topilmadi!")
