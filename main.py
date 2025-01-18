@@ -1,5 +1,3 @@
-from keep_alive import keep_alive
-keep_alive()
 import telebot
 import json
 import random
@@ -8,6 +6,8 @@ import os
 import schedule
 import time
 import threading
+from keep_alive import keep_alive
+keep_alive()
 
 # Initialize the bot
 API_TOKEN = '7585914391:AAHNP7x_oezIXtlVwrlCI0HGMjBsRzkqx2Q'
@@ -112,7 +112,7 @@ def import_user_data(message):
         user_id = message.from_user.id
         if user_id in admin_ids:
             if os.path.exists(USER_DATA_FILE):  
-                with open(USER_DATA_FILE, 'rb') as file:
+h                with open(USER_DATA_FILE, 'rb') as file:
                     bot.send_document(message.chat.id, file)
             else:
                 bot.send_message(message.chat.id, "Fayl topilmadi!")
@@ -216,4 +216,4 @@ def handle_addition(message):
 
 # Start the bot and polling
 bot.polling(none_stop=True)
-                    
+        
