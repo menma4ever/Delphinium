@@ -6,13 +6,17 @@ import os
 import schedule
 import time
 import threading
-from keep_alive import keep_alive
+from flask import Flask, request
+from keep_alive import keep_alive  # Import the keep_alive function
+
+# Keep the Flask server alive
 keep_alive()
 
 # Initialize the bot
 API_TOKEN = '7585914391:AAHNP7x_oezIXtlVwrlCI0HGMjBsRzkqx2Q'
 GROUP_CHAT_ID = -1002262322366
 bot = telebot.TeleBot(API_TOKEN)
+app = Flask(__name__)
 
 # Load or initialize user data
 USER_DATA_FILE = 'user_delp.json'
@@ -54,6 +58,9 @@ def run_scheduler():
     while True:
         schedule.run_pending()
         time.sleep(10)  # Check every 10 seconds
+
+# Start the scheduler in a background thread
+threading.Thread(target=run_scheduler, daemon=True).start()
 
 # Function to generate a unique ticket
 def generate_unique_ticket(existing_tickets):
@@ -200,22 +207,21 @@ def handle_addition(message):
             }
             save_user_data(user_data)
 
-        try:
-            # Send a welcome message to the new user in private chat
-            bot.send_message(
-                new_user.id,
-                f"\U0001F44B Salom, [{new_user.first_name}](tg://user?id={new_user.id})! Siz guruhga qo'shildingiz. "
-                f"Botdan foydalanish uchun xususiy chatda /start buyrug'ini kiriting.",
-                parse_mode="Markdown"
-            )
-        except Exception as e:
-            print(f"Xabar yuborishda xatolik yuz berdi: {e}")
+# Flask webhook setup
+@app.route(f'/{API_TOKEN}', methods=['POST'])
+def webhook():
+    json_str = request.get_data().decode('UTF-8')
+    update = telebot.types.Update.de_json(json_str)
+    bot.process_new_updates([update])
+    return 'OK'
 
-# Run the bot and scheduler
-def start_bot():
-    bot.polling(none_stop=True)  # Start the bot's polling in the main thread
+@app.route('/')
+def index():
+    return 'Bot is running!'
 
-if __name__ == '__main__':
-    threading.Thread(target=run_scheduler, daemon=True).start()  # Start the scheduler in a separate thread
-    start_bot()  # Start the bot polling in the main thread
-            
+# Start the Flask server
+if __name__ == "__main__":
+    bot.remove_webhook()
+    bot.set_webhook(url=f'https://your-app-name.com/{API_TOKEN}')  # Replace with your actual URL
+    app.run(host="0.0.0.0", port=8080)
+    
