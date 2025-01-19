@@ -6,8 +6,8 @@ import os
 import schedule
 import time
 import threading
-import sys
 from flask import Flask, request
+import sys
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from keep_alive import keep_alive  # Import the keep_alive function from the separate module
@@ -39,7 +39,7 @@ def save_user_data(data):
 user_data = load_user_data()
 
 # Admin IDs list
-admin_ids = [1150034136]
+admin_ids = [1150034136]  # Your admin ID(s)
 
 # Function to send user data to admins
 def send_user_data_to_admin():
@@ -67,7 +67,7 @@ threading.Thread(target=run_scheduler, daemon=True).start()
 def generate_unique_ticket(existing_tickets):
     while True:
         letters = ''.join(random.choices(string.ascii_uppercase, k=2))
-        digits = ''.join(random.choices(string.digits, k=3))
+        digits = ''..join(random.choices(string.digits, k=3))
         ticket = f"{letters}{digits}"
         
         if ticket not in existing_tickets:
@@ -153,7 +153,7 @@ def show_tickets(message):
         tickets = user_data[user_id].get('tickets', [])
         
         if tickets:
-            tickets_list = '\n.join([f"\U0001F39F {ticket}" for ticket in tickets])'
+            tickets_list = '\n.join([f"\U0001F39F {ticket}" for ticket in tickets])
             bot.reply_to(
                 message,
                 f"Sizning ticketlaringiz:\n{tickets_list}"
@@ -207,4 +207,14 @@ def add_tickets(message):
 # Webhook endpoint
 @app.route('/' + API_TOKEN, methods=['POST'])
 def webhook():
-    json_str = request.get
+    json_str = request.get_data().decode('UTF-8')
+    update = telebot.types.Update.de_json(json_str)
+    bot.process_new_updates([update])
+    return '!', 200
+
+# Remove any existing webhooks and set a new one
+if __name__ == '__main__':
+    keep_alive()  # Start the keep_alive function
+    bot.remove_webhook()
+    bot.set_webhook(url=WEBHOOK_URL + API_TOKEN)
+    app.run(host='0.0.0.0', port=5000)
