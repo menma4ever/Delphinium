@@ -6,15 +6,18 @@ import os
 import schedule
 import time
 import threading
-from keep_alive import keep_alive
+import sys
+from flask import Flask, request
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-# Start the keep_alive function to keep the Flask server running
-keep_alive()
+from keep_alive import keep_alive  # Import the keep_alive function from the separate module
 
 # Initialize the bot
-API_TOKEN = '7585914391:AAHNP7x_oezIXtlVwrlCI0HGMjBsRzkqx2Q'  # Your bot's API token
-GROUP_CHAT_ID = -1002262322366  # Your group's chat ID (ensure this is correct)
+API_TOKEN = '7585914391:AAHNP7x_oezIXtlVwrlCI0HGMjBsRzkqx2Q'
+GROUP_CHAT_ID = -1002262322366
+WEBHOOK_URL = 'YOUR_WEBHOOK_URL'  # Replace with your webhook URL
 bot = telebot.TeleBot(API_TOKEN)
+app = Flask(__name__)
 
 # Load or initialize user data
 USER_DATA_FILE = 'user_delp.json'
@@ -36,17 +39,17 @@ def save_user_data(data):
 user_data = load_user_data()
 
 # Admin IDs list
-admin_ids = [1150034136]  # List of admin IDs for admin commands
+admin_ids = [1150034136]
 
 # Function to send user data to admins
 def send_user_data_to_admin():
     """Send user data to admin(s)."""
     for admin_id in admin_ids:
-        if os.path.exists(USER_DATA_FILE):  # Check if file exists
+        if os.path.exists(USER_DATA_FILE):
             with open(USER_DATA_FILE, 'rb') as file:
-                bot.send_document(admin_id, file)  # Send the file to admin
+                bot.send_document(admin_id, file)
         else:
-            bot.send_message(admin_id, "Fayl topilmadi!")  # If file doesn't exist
+            bot.send_message(admin_id, "Fayl topilmadi!")
 
 # Schedule to send data every hour
 schedule.every(1).hour.do(send_user_data_to_admin)
@@ -55,7 +58,7 @@ schedule.every(1).hour.do(send_user_data_to_admin)
 def run_scheduler():
     while True:
         schedule.run_pending()
-        time.sleep(10)  # Check every 10 seconds
+        time.sleep(10)
 
 # Start the scheduler in a background thread
 threading.Thread(target=run_scheduler, daemon=True).start()
@@ -63,17 +66,12 @@ threading.Thread(target=run_scheduler, daemon=True).start()
 # Function to generate a unique ticket
 def generate_unique_ticket(existing_tickets):
     while True:
-        # Generate a random ticket with 2 letters and 3 digits (e.g., "AB123" or "ZP987")
-        letters = ''.join(random.choices(string.ascii_uppercase, k=2))  # 2 random uppercase letters
-        digits = ''.join(random.choices(string.digits, k=3))           # 3 random digits
+        letters = ''.join(random.choices(string.ascii_uppercase, k=2))
+        digits = ''.join(random.choices(string.digits, k=3))
         ticket = f"{letters}{digits}"
         
-        # Check if the ticket already exists in the database
         if ticket not in existing_tickets:
             return ticket
-
-# Define the authorized user (replace with the actual user ID or username)
-AUTHORIZED_USER = "@enemyofeternity"  # The user who can use this command
 
 # Handle the /start command
 @bot.message_handler(commands=['start'])
@@ -149,14 +147,13 @@ def import_user_data(message):
 # Handle the /mytickets command
 @bot.message_handler(commands=['mytickets'])
 def show_tickets(message):
-    user_id = str(message.from_user.id)  # Foydalanuvchi ID sini olish (string formatda)
+    user_id = str(message.from_user.id)
 
-    # Foydalanuvchining ma'lumotlari borligini tekshirish
     if user_id in user_data:
         tickets = user_data[user_id].get('tickets', [])
         
-        if tickets:  # Agar ticketlar ro'yxati bo'sh bo'lmasa
-            tickets_list = '\n'.join([f"\U0001F39F {ticket}" for ticket in tickets])  # Har bir ticketni oldiga emoji qo'shish
+        if tickets:
+            tickets_list = '\n.join([f"\U0001F39F {ticket}" for ticket in tickets])'
             bot.reply_to(
                 message,
                 f"Sizning ticketlaringiz:\n{tickets_list}"
@@ -172,44 +169,42 @@ def show_tickets(message):
             "Sizda hech qanday ticket yo'q."
         )
 
-# Handle the /addtickets command for authorized user
+# Handle the /addtickets command for admin users
 @bot.message_handler(commands=['addtickets'])
 def add_tickets(message):
-    if message.from_user.username == AUTHORIZED_USER:
+    user_id = message.from_user.id
+    if user_id in admin_ids:
         command_parts = message.text.split()
+        
         if len(command_parts) == 2 and command_parts[1].isdigit():
             quantity = int(command_parts[1])
+
             target_user = message.reply_to_message.from_user if message.reply_to_message else None
             if not target_user:
-                bot.reply_to(message, "Iltimos, ticketlarni qaysi foydalanuvchiga berish kerakligini ko'rsating (javobni tanlang).")
+                bot.send_message(message.chat.id, "Iltimos, ticketlarni qaysi foydalanuvchiga berish kerakligini ko'rsating (javobni tanlang).")
                 return
-
+            
             existing_tickets = [ticket for user in user_data.values() for ticket in user.get('tickets', [])]
+            
             generated_tickets = []
             for _ in range(quantity):
                 new_ticket = generate_unique_ticket(existing_tickets)
                 user_data[str(target_user.id)]['tickets'].append(new_ticket)
                 generated_tickets.append(new_ticket)
-
+            
             save_user_data(user_data)
-            bot.reply_to(message, f"Siz {quantity} ta ticketni [{target_user.first_name}](tg://user?id={target_user.id}) uchun yaratdingiz.")
+
+            bot.send_message(message.chat.id, f"Siz {quantity} ta ticketni [{target_user.first_name}](tg://user?id={target_user.id}) uchun yaratdingiz.", parse_mode="Markdown")
             bot.send_message(
                 target_user.id,
                 f"Sizga {quantity} ta yangi ticket berildi: {', '.join(generated_tickets)}."
             )
         else:
-            bot.reply_to(message, "Iltimos, to'g'ri miqdorni kiriting (masalan: /addtickets 10).")
+            bot.send_message(message.chat.id, "Iltimos, to'g'ri miqdorni kiriting (masalan: /addtickets 10).")
     else:
-        bot.reply_to(message, "Sizda bu komanda uchun ruxsat yo'q.")
+        bot.send_message(message.chat.id, "Sizda bu komanda uchun ruxsat yo'q.")
 
-# Automatic reconnection
-def run_bot():
-    while True:
-        try:
-            bot.polling(none_stop=True)
-        except Exception as e:
-            print(f"Bot polling error: {e}")
-            time.sleep(15)  # Wait before reconnecting
-
-if __name__ == "__main__":
-    run_bot()
+# Webhook endpoint
+@app.route('/' + API_TOKEN, methods=['POST'])
+def webhook():
+    json_str = request.get
