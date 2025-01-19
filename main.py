@@ -153,7 +153,7 @@ def show_tickets(message):
         tickets = user_data[user_id].get('tickets', [])
         
         if tickets:
-            tickets_list = '\n.join([f"\U0001F39F {ticket}" for ticket in tickets])
+            tickets_list = '\n.join([f"\U0001F39F {ticket}" for ticket in tickets])'
             bot.reply_to(
                 message,
                 f"Sizning ticketlaringiz:\n{tickets_list}"
