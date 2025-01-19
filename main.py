@@ -67,7 +67,7 @@ threading.Thread(target=run_scheduler, daemon=True).start()
 def generate_unique_ticket(existing_tickets):
     while True:
         letters = ''.join(random.choices(string.ascii_uppercase, k=2))
-        digits = ''..join(random.choices(string.digits, k=3))
+        digits = ''.join(random.choices(string.digits, k=3))
         ticket = f"{letters}{digits}"
         
         if ticket not in existing_tickets:
