@@ -11,7 +11,7 @@ import sys
 from telegram import ChatPermissions
 from telegram.ext import CommandHandler, MessageHandler, filters
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-from keep-alive import keep_alive
+from keep_alive import keep_alive
 keep_alive()
 
 # from keep_alive import keep_alive  # Import the keep_alive function from the separate module
