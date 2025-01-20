@@ -289,7 +289,7 @@ def profile(message):
     bot.reply_to(
         message,
         f"Profil Ma'lumotlari:\n\n"
-        f"Nickname: {user_info['nickname']}\n"
+        #f"Nickname: {user_info['nickname']}\n"
         f"Yosh: {user_info['age']}\n"
         f"Tickets: {tickets_count} 🎟️\n"
         f"Yutish imkoniyati: {win_chance:.2f}% ✨"
